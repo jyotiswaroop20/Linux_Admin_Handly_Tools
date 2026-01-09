@@ -55,14 +55,14 @@ LCBP is useful for:
 ---
 
 ## 📂 Project Structure
-
+```
 LCBP_Linux_Command_Behavior_Profiler/
 ├── src/
 │ ├── lcbp.c # C wrapper to execute commands with strace
 │ ├── analyzer.py # Python script to analyze trace logs
 ├── install.sh # Installation script
 └── README.md # Project documentation
-
+```
 
 ---
 
