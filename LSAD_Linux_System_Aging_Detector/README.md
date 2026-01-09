@@ -27,7 +27,7 @@ lsad --help
 
 ---
 
-## Sample Output:
+Sample Output:
 System Age Score : 78 / 100 (OLD)
 Uptime           : 143 days
 Zombie Processes : 7
@@ -36,7 +36,7 @@ Recommendation   : Reboot cycle overdue
 
 ---
 
-## 3. How It Works
+3. How It Works
 LSAD evaluates the system based on:
 System uptime
 Zombie processes
@@ -47,7 +47,7 @@ All factors contribute to a System Age Score, which indicates the system’s hea
 
 ---
 
-## 4. Installation
+4. Installation
 Installation script: install.sh
 Steps:
 
@@ -60,7 +60,7 @@ Compiles the C CLI wrapper (lsad) and places it in /usr/local/bin/
 Copies the Python analyzer to /usr/local/lib/lsad/
 Makes lsad executable
 
-## Post-installation:
+Post-installation:
 
 lsad
 
@@ -69,7 +69,7 @@ Run the tool to get your system health and aging report.
 ---
 
 
-## 5. Key Features
+5. Key Features
 
 Calculates a System Age Score out of 100
 Detects zombie processes and high disk usage
@@ -79,7 +79,7 @@ Lightweight, safe, and easy to run from the CLI
 
 ---
 
-## 6. Target Users
+6. Target Users
 
 LSAD is useful for:
 Linux System Administrators
@@ -89,7 +89,7 @@ Linux learners and enthusiasts
 
 ---
 
-## 7. Notes
+7. Notes
 
 LSAD does not modify system files
 Only monitors and reports system aging metrics
@@ -97,5 +97,5 @@ Should be run periodically for preventive maintenance
 
 ---
 
-## Author: Jyotiswaroop Tripathi
-## Linux System Administrator
+Author: Jyotiswaroop Tripathi
+Linux System Administrator
