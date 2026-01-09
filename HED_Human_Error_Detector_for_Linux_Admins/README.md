@@ -31,7 +31,7 @@ hed --help
 
 ---
 
-## Sample Output:
+Sample Output:
 WARNING: Potentially dangerous command detected!
 Command : rm -rf /var/log
 Reason  : Recursive delete on system directory
@@ -41,7 +41,7 @@ Continue? (yes/no):
 
 ---
 
-## 3. How It Works (Architecture)
+3. How It Works (Architecture)
 User runs a command via hed
 C wrapper forwards the command to the Python detector
 Python analyzes the command for:
@@ -52,13 +52,13 @@ If dangerous → prompts user for confirmation
 
 ---
 
-## 4. Installation
+4. Installation
 Installation script: install.sh
 Steps:
 chmod +x install.sh
 sudo ./install.sh
 
-## What it does:
+What it does:
 Compiles the C wrapper (hed) and places it in /usr/local/bin/
 Copies the Python detector (detector.py) to /usr/local/lib/hed/
 Makes hed executable
@@ -68,7 +68,7 @@ Run any command safely, with HED protecting against accidental destructive opera
 
 ---
 
-## 5. Key Features
+5. Key Features
 Detects dangerous Linux commands before execution
 Prevents accidental deletion of critical system files
 Suggests safer alternatives when possible
@@ -77,7 +77,7 @@ Lightweight and system-friendly
 
 ---
 
-## 6. Target Users
+6. Target Users
 HED is useful for:
 Linux System Administrators
 DevOps Engineers / SREs
@@ -86,12 +86,12 @@ Linux learners and trainees
 
 ---
 
-## 7. Notes
+7. Notes
 HED does not modify system commands; it wraps and checks them
 Only detects commands included in its predefined patterns
 Users should still exercise caution when running destructive commands
 
 ---
 
-## Author: Jyotiswaroop Tripathi
-## Linux System Administrator
+Author: Jyotiswaroop Tripathi
+Linux System Administrator
