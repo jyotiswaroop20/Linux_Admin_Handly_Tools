@@ -1,0 +1,21 @@
+# This tools is for checking status of multiple service that that is being running or not
+
+#!/usr/bin/python3
+
+import sys
+import subprocess
+
+if len(sys.argv) < 2:
+    print("Usage: check_service <service_name> [service_name ...]")
+    sys.exit(1)
+
+if sys.argv[1] in ("-h", "--help"):
+    print("Usage: check_service <service_name> [service_name ...]")
+    sys.exit(0)
+
+services = sys.argv[1:]
+
+for service in services:
+    status = subprocess.getoutput(f"systemctl is-active {service}")
+    print(f"{service} : {status}")
+
