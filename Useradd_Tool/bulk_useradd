@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import subprocess
+import crypt
+import getpass
+
+# ---------- Root / Sudo Check ----------
+if os.geteuid() != 0:
+    print("❌ This tool must be run as root or with sudo")
+    sys.exit(1)
+
+print("\nBulk User Creation Tool (type 'exit' to quit)\n")
+
+while True:
+    username = input("Enter username: ").strip()
+
+    if username.lower() == "exit":
+        print("\nExiting user creation tool.")
+        break
+
+    if not username:
+        print("❌ Username cannot be empty\n") 
+        continue
+
+    fullname = input("Enter full name (display name): ").strip()
+    shell = input("Enter login shell [/bin/bash]: ").strip() or "/bin/bash"
+    home_dir = input(f"Enter home directory [/home/{username}]: ").strip() or f"/home/{username}"
+
+    # ---------- Password Input (Hidden) ----------
+    password = getpass.getpass("Enter password: ")
+    confirm_password = getpass.getpass("Confirm password: ")
+
+    if password != confirm_password:
+        print("❌ Passwords do not match\n")
+        continue
+
+    if not password:
+        print("❌ Password cannot be empty\n")
+        continue
+
+    # ---------- SHA512 Password Hash ----------
+    hashed_password = crypt.crypt(password, crypt.mksalt(crypt.METHOD_SHA512))
+
+    # ---------- User Creation ----------
+    try:
+        subprocess.run(
+            [
+                "useradd",
+                "-m",
+                "-d", home_dir,
+                "-s", shell,
+                "-c", fullname,
+                "-p", hashed_password,
+                username
+            ],
+            check=True
+        )
+        print(f"✅ User '{username}' created successfully\n")
+
+    except subprocess.CalledProcessError:
+        print(f"❌ Failed to create user '{username}' (maybe already exists?)\n")
