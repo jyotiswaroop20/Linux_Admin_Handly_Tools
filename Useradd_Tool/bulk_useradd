@@ -5,6 +5,7 @@ import sys
 import subprocess
 import crypt
 import getpass
+import re
 
 # ---------- Root / Sudo Check ----------
 if os.geteuid() != 0:
@@ -12,6 +13,20 @@ if os.geteuid() != 0:
     sys.exit(1)
 
 print("\nBulk User Creation Tool (type 'exit' to quit)\n")
+
+# ---------- Password Complexity Function ----------
+def check_password_complexity(password):
+    if len(password) < 8:
+        return "Password must be at least 8 characters long"
+    if not re.search(r"[A-Z]", password):
+        return "Password must contain at least one uppercase letter"
+    if not re.search(r"[a-z]", password):
+        return "Password must contain at least one lowercase letter"
+    if not re.search(r"[0-9]", password):
+        return "Password must contain at least one digit"
+    if not re.search(r"[!@#$%^&*()_+=\-{}[\]:;\"'<>,.?/]", password):
+        return "Password must contain at least one special character"
+    return None
 
 while True:
     username = input("Enter username: ").strip()
@@ -21,7 +36,7 @@ while True:
         break
 
     if not username:
-        print("❌ Username cannot be empty\n") 
+        print("❌ Username cannot be empty\n")
         continue
 
     fullname = input("Enter full name (display name): ").strip()
@@ -38,6 +53,12 @@ while True:
 
     if not password:
         print("❌ Password cannot be empty\n")
+        continue
+
+    # ---------- Password Complexity Check ----------
+    error = check_password_complexity(password)
+    if error:
+        print(f"❌ Weak password: {error}\n")
         continue
 
     # ---------- SHA512 Password Hash ----------
@@ -61,3 +82,4 @@ while True:
 
     except subprocess.CalledProcessError:
         print(f"❌ Failed to create user '{username}' (maybe already exists?)\n")
+
