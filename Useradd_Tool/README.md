@@ -92,7 +92,6 @@ Designed for clarity, safety, and learning purposes
 
 🔮 Future Enhancements are going on-----
 Group assignment during user creation
-Password complexity enforcement
 Account expiry and aging options
 CSV-based bulk user import
 Logging and audit support
