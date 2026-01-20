@@ -1,0 +1,142 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import subprocess
+import logging
+
+LOG_FILE = "/var/log/smartpkg.log"
+
+logging.basicConfig(
+    filename=LOG_FILE,
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+SERVICE_MAP = {
+    "nginx": "nginx",
+    "httpd": "httpd",
+    "apache2": "apache2",
+    "docker": "docker",
+    "sshd": "sshd"
+}
+
+def log(msg):
+    print(msg)
+    logging.info(msg)
+
+def run(cmd):
+    p = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    return p.returncode, p.stdout.strip(), p.stderr.strip()
+
+def is_root():
+    return os.geteuid() == 0
+
+def detect_os():
+    if os.path.exists("/etc/debian_version"):
+        return "debian"
+    if os.path.exists("/etc/redhat-release"):
+        return "fedora"
+    return None
+
+# 🔍 SMART RPM/DNF INSTALLED CHECK
+def is_installed(pkg, os_type):
+    if os_type == "debian":
+        return run(f"dpkg -s {pkg}")[0] == 0
+
+    # Fedora / RHEL logic
+    checks = [
+        f"rpm -q {pkg}",
+        f"rpm -qa | grep -E '^{pkg}(-|$)'",
+        f"dnf list installed | grep -E '^{pkg}[.-]'"
+    ]
+
+    for cmd in checks:
+        if run(cmd)[0] == 0:
+            return True
+    return False
+
+def service_active(service):
+    return run(f"systemctl is-active {service}")[1] == "active"
+
+def service_enabled(service):
+    return run(f"systemctl is-enabled {service}")[1] == "enabled"
+
+def install_cmd(pkgs, os_type):
+    if os_type == "debian":
+        return f"apt-get update -y && apt-get install -y {' '.join(pkgs)}"
+    return f"dnf install -y {' '.join(pkgs)}"
+
+def remove_cmd(pkgs, os_type):
+    if os_type == "debian":
+        return f"apt-get remove -y {' '.join(pkgs)}"
+    return f"dnf remove -y {' '.join(pkgs)}"
+
+def manage_service(service):
+    run(f"systemctl enable {service}")
+    run(f"systemctl start {service}")
+    state = "RUNNING" if service_active(service) else "NOT RUNNING"
+    log(f"ok: service[{service}] state={state}")
+
+def main():
+    if not is_root():
+        print("failed: please run as root or sudo")
+        sys.exit(1)
+
+    if len(sys.argv) < 2:
+        print("Usage: smartpkg [--dry-run] <pkg1> <pkg2>")
+        sys.exit(1)
+
+    dry_run = False
+    if "--dry-run" in sys.argv:
+        dry_run = True
+        sys.argv.remove("--dry-run")
+
+    packages = sys.argv[1:]
+    os_type = detect_os()
+
+    if not os_type:
+        print("failed: unsupported distribution")
+        sys.exit(1)
+
+    log(f"START smartpkg | OS={os_type} | dry_run={dry_run}")
+
+    to_install = []
+    installed_now = []
+
+    for pkg in packages:
+        if is_installed(pkg, os_type):
+            log(f"ok: package[{pkg}] already installed")
+        else:
+            if dry_run:
+                log(f"would-change: package[{pkg}] would be installed")
+            else:
+                to_install.append(pkg)
+
+        if pkg in SERVICE_MAP:
+            service = SERVICE_MAP[pkg]
+            if service_active(service) and service_enabled(service):
+                log(f"ok: service[{service}] already running and enabled")
+            else:
+                if dry_run:
+                    log(f"would-change: service[{service}] would be enabled and started")
+
+    if not dry_run and to_install:
+        rc, _, err = run(install_cmd(to_install, os_type))
+        if rc != 0:
+            log(f"failed: installation error | {err}")
+            log("rollback: removing installed packages")
+            run(remove_cmd(installed_now, os_type))
+            sys.exit(1)
+
+        for pkg in to_install:
+            log(f"changed: package[{pkg}] installed")
+            installed_now.append(pkg)
+            if pkg in SERVICE_MAP:
+                manage_service(SERVICE_MAP[pkg])
+
+    log("END smartpkg | DRY-RUN SUCCESS" if dry_run else "END smartpkg | SUCCESS")
+
+if __name__ == "__main__":
+    main()
+
