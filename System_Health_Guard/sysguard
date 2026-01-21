@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import subprocess
+import shutil
+
+# ---------- Root Check ----------
+if os.geteuid() != 0:
+    print("❌ Please run as root or with sudo")
+    sys.exit(1)
+
+def run(cmd):
+    return subprocess.getoutput(cmd).strip()
+
+def command_exists(cmd):
+    return shutil.which(cmd) is not None
+
+# ---------- SYSTEM HEALTH SCAN ----------
+def scan_logs():
+    print("\n🔍 Performing intelligent system health analysis...\n")
+
+    issues = []
+
+    # ---------- Disk Usage ----------
+    disk = run("df -h | awk '$5+0 >= 90 {print}'")
+    if disk:
+        issues.append(("CRITICAL", "Disk Usage High", disk,
+                       "Free disk space or extend filesystem"))
+
+    # ---------- Inode Usage ----------
+    inode = run("df -i | awk '$5+0 >= 90 {print}'")
+    if inode:
+        issues.append(("CRITICAL", "Inode Usage High", inode,
+                       "Remove unnecessary small files"))
+
+    # ---------- Failed Services ----------
+    failed_services = run("systemctl --failed --no-legend")
+    if failed_services:
+        issues.append(("CRITICAL", "Failed Services", failed_services,
+                       "Check logs and restart failed services"))
+
+    # ---------- CPU ----------
+    cpu = run("top -bn1 | awk '/Cpu/ {print int($2+$4)}'")
+    if cpu.isdigit() and int(cpu) > 90:
+        issues.append(("MEDIUM", "High CPU Usage", f"CPU usage: {cpu}%",
+                       "Identify and optimize high CPU processes"))
+
+    # ---------- Memory ----------
+    mem = run("free | awk '/Mem/ {print int($3/$2*100)}'")
+    if mem.isdigit() and int(mem) > 90:
+        issues.append(("MEDIUM", "High Memory Usage", f"Memory usage: {mem}%",
+                       "Restart heavy services or add RAM"))
+
+    # ---------- Swap ----------
+    swap = run("free | awk '/Swap/ && $2>0 {print int($3/$2*100)}'")
+    if swap.isdigit() and int(swap) > 80:
+        issues.append(("MEDIUM", "High Swap Usage", f"Swap usage: {swap}%",
+                       "Investigate memory leak or increase RAM"))
+
+    # ---------- RAID ----------
+    if os.path.exists("/proc/mdstat"):
+        raid = run("grep -i degraded /proc/mdstat")
+        if raid:
+            issues.append(("CRITICAL", "RAID Degraded", raid,
+                           "Replace failed RAID disk immediately"))
+
+    # ---------- Filesystem Errors ----------
+    fs_err = run("dmesg | grep -i 'EXT4-fs error\\|XFS.*error' | tail -3")
+    if fs_err:
+        issues.append(("CRITICAL", "Filesystem Errors", fs_err,
+                       "Run fsck in maintenance window"))
+
+    # ---------- Load Average ----------
+    load = run("uptime | awk -F'load average:' '{print $2}' | cut -d',' -f1")
+    cores = os.cpu_count()
+    try:
+        if float(load) > cores:
+            issues.append(("MEDIUM", "High Load Average",
+                           f"Load: {load}, CPU cores: {cores}",
+                           "Analyze running processes"))
+    except:
+        pass
+
+    # ---------- Docker ----------
+    if command_exists("docker"):
+        docker_fail = run("docker ps -a --filter status=exited --format '{{.Names}}'")
+        if docker_fail:
+            issues.append(("MEDIUM", "Docker Containers Failed", docker_fail,
+                           "Restart containers and check logs"))
+
+    # ---------- Kubernetes ----------
+    if command_exists("kubectl"):
+        k8s = run("kubectl get nodes --no-headers 2>/dev/null | awk '$2!=\"Ready\"'")
+        if k8s:
+            issues.append(("CRITICAL", "Kubernetes Node Issue", k8s,
+                           "Check kubelet and node resources"))
+
+    # ---------- FINAL OUTPUT ----------
+    if not issues:
+        print("✅ System Health Status: CLEAN")
+        print("No issues detected. No action required.\n")
+        return
+
+    for sev, title, detail, fix in issues:
+        print(f"❌ [{sev}] {title}")
+        print(f"📄 Details:\n{detail}")
+        print(f"🛠️ Solution: {fix}\n")
+
+# ---------- FILE + DIRECTORY SEARCH ----------
+def search_anything(keyword):
+    print(f"\n🔎 Searching for files & directories matching: {keyword}\n")
+    found = False
+
+    # ----- LOCATE (FAST) -----
+    if command_exists("locate"):
+        locate_res = run(f"locate -i {keyword} | head -20")
+        if locate_res:
+            print("⚡ Found using locate:")
+            print(locate_res)
+            found = True
+
+    # ----- FIND (DEEP & ACCURATE) -----
+    find_res = run(f"find / -iname '*{keyword}*' 2>/dev/null | head -20")
+    if find_res:
+        print("\n🔍 Found using find:")
+        print(find_res)
+        found = True
+
+    if not found:
+        print("❌ No matching file or directory found")
+
+# ---------- MAIN ----------
+def usage():
+    print("""
+Usage:
+  sysguard --scan-logs
+  sysguard --find <file_or_directory_name>
+""")
+
+if len(sys.argv) < 2:
+    usage()
+    sys.exit(1)
+
+if sys.argv[1] == "--scan-logs":
+    scan_logs()
+
+elif sys.argv[1] == "--find" and len(sys.argv) == 3:
+    search_anything(sys.argv[2])
+
+else:
+    usage()
+
